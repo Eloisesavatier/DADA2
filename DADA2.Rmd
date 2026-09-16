@@ -62,4 +62,46 @@ plotErrors(errF, nominalQ=TRUE)
 dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
 ```
 
+```{r}
+dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
+```
 
+```{r}
+dadaFs[[1]]
+```
+
+
+```{r}
+mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
+# Inspect the merger data.frame from the first sample
+head(mergers[[1]])
+```
+
+
+```{r}
+seqtab <- makeSequenceTable(mergers)
+dim(seqtab)
+```
+
+```{r}
+# Inspect distribution of sequence lengths
+table(nchar(getSequences(seqtab)))
+```
+
+
+```{r}
+seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+dim(seqtab.nochim)
+```
+
+
+
+
+
+
+
+
+
+
+
+taxa <- addSpecies(taxa, "/home/rstudio/DADA2/silva_nr99_v138.2_toSpecies_trainset.fa.gz")
