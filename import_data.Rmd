@@ -13,7 +13,7 @@ unzip miseqsopdata.zip
 
 
 ```{bash}
-wget https://zenodo.org/records/14169026/files/silva_nr99_v138.2_toSpecies_trainset.fa.gz
+wget https://zenodo.org/records/14169026/files/silva_nr99_v138.2_toGenus_trainset.fa.gz
 ```
 
 
