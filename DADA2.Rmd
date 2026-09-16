@@ -3,6 +3,8 @@ title: "R Notebook"
 output: github_document
 ---
 
+# Getting ready
+
 ```{r}
 library(dada2); packageVersion("dada2")
 ```
@@ -12,6 +14,8 @@ library(dada2); packageVersion("dada2")
 path <- "/home/rstudio/DADA2/MiSeq_SOP"
 list.files(path)
 ```
+
+
 ```{r}
 # Forward and reverse fastq filenames have format: SAMPLENAME_R1_001.fastq and SAMPLENAME_R2_001.fastq
 fnFs <- sort(list.files(path, pattern="_R1_001.fastq", full.names = TRUE))
@@ -21,15 +25,21 @@ sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
 ```
 
 
+
+# Inspect read quality profiles
+
 ```{r}
 plotQualityProfile(fnFs[1:2])
 ```
 
 
-
 ```{r}
 plotQualityProfile(fnRs[1:2])
 ```
+
+
+
+# Filter and trim
 
 ```{r}
 # Place filtered files in filtered/ subdirectory
@@ -39,6 +49,7 @@ names(filtFs) <- sample.names
 names(filtRs) <- sample.names
 ```
 
+
 ```{r}
 out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(240,160),
               maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE,
@@ -46,30 +57,45 @@ out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(240,160),
 head(out)
 ```
 
+
+
+# Learn the Error Rates
+
 ```{r}
 errF <- learnErrors(filtFs, multithread=TRUE)
 ```
+
 
 ```{r}
 errR <- learnErrors(filtRs, multithread=TRUE)
 ```
 
+
 ```{r}
 plotErrors(errF, nominalQ=TRUE)
 ```
+
+
+
+# Sample Inference
 
 ```{r}
 dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
 ```
 
+
 ```{r}
 dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
 ```
+
 
 ```{r}
 dadaFs[[1]]
 ```
 
+
+
+# Merge paired reads
 
 ```{r}
 mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
@@ -78,16 +104,23 @@ head(mergers[[1]])
 ```
 
 
+
+# Construct sequence table
+
 ```{r}
 seqtab <- makeSequenceTable(mergers)
 dim(seqtab)
 ```
+
 
 ```{r}
 # Inspect distribution of sequence lengths
 table(nchar(getSequences(seqtab)))
 ```
 
+
+
+# Remove chimeras
 
 ```{r}
 seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
@@ -100,6 +133,9 @@ sum(seqtab.nochim)/sum(seqtab)
 ```
 
 
+
+# Track reads through the pipeline
+
 ```{r}
 getN <- function(x) sum(getUniques(x))
 track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))
@@ -110,13 +146,18 @@ head(track)
 ```
 
 
+
+# Assign taxonomy
+
 ```{r}
-taxa <- assignTaxonomy(seqtab.nochim, "/home/rstudio/DADA2/silva_nr99_v138.2_toGenus_trainset.fa.gz.3", multithread=TRUE)
+taxa <- assignTaxonomy(seqtab.nochim, "/home/rstudio/DADA2/silva_nr99_v138.2_toGenus_trainset.fa.gz", multithread=TRUE)
 ```
+
 
 ```{r}
 taxa <- addSpecies(taxa, "/home/rstudio/DADA2/silva_v138.2_assignSpecies.fa.gz")
 ```
+
 
 ```{r}
 taxa.print <- taxa # Removing sequence rownames for display only
@@ -124,22 +165,30 @@ rownames(taxa.print) <- NULL
 head(taxa.print)
 ```
 
-```{r}
-library(DECIPHER); packageVersion("DECIPHER")
-```
+
+
+# Evaluate accuracy
 
 ```{r}
-dna <- DNAStringSet(getSequences(seqtab.nochim)) # Create a DNAStringSet from the ASVs
-load("~/tax/IDTaxa/SILVA_SSU_r138_2_2024.RData") # CHANGE TO THE PATH OF YOUR TRAINING SET
-ids <- IdTaxa(dna, trainingSet, strand="top", processors=NULL, verbose=FALSE) # use all processors
-ranks <- c("domain", "phylum", "class", "order", "family", "genus", "species") # ranks of interest
-# Convert the output object of class "Taxa" to a matrix analogous to the output from assignTaxonomy
-taxid <- t(sapply(ids, function(x) {
-        m <- match(ranks, x$rank)
-        taxa <- x$taxon[m]
-        taxa[startsWith(taxa, "unclassified_")] <- NA
-        taxa
-}))
-colnames(taxid) <- ranks; rownames(taxid) <- getSequences(seqtab.nochim)
+unqs.mock <- seqtab.nochim["Mock",]
+unqs.mock <- sort(unqs.mock[unqs.mock>0], decreasing=TRUE) # Drop ASVs absent in the Mock
+cat("DADA2 inferred", length(unqs.mock), "sample sequences present in the Mock community.\n")
+```
+
+
+```{r}
+mock.ref <- getSequences(file.path(path, "HMP_MOCK.v35.fasta"))
+match.ref <- sum(sapply(names(unqs.mock), function(x) any(grepl(x, mock.ref))))
+cat("Of those,", sum(match.ref), "were exact matches to the expected reference sequences.\n")
+```
+
+
+
+# Bonus: Handoff to phyloseq
+
+```{r}
+install.packages("igraph", type = "source") 
+BiocManager::install("phyloseq", update = FALSE)
+library(phyloseq); packageVersion("phyloseq")
 ```
 

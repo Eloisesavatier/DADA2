@@ -8,9 +8,23 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
 BiocManager::install("dada2", version = "3.23")
 ```
 
+
 ```{r}
 if (!requireNamespace("BiocManager", quietly=TRUE))
     install.packages("BiocManager")
 BiocManager::install("DECIPHER")
+```
+
+
+
+# Install phyloseq
+
+```{r}
+install.packages("igraph", type = "source")
+```
+
+
+```{r}
+BiocManager::install("phyloseq", update = FALSE)
 ```
 
