@@ -22,3 +22,4 @@ wget https://zenodo.org/records/14169026/files/silva_nr99_v138.2_toGenus_trainse
 wget https://zenodo.org/records/14169026/files/silva_v138.2_assignSpecies.fa.gz
 ```
 
+
