@@ -111,6 +111,35 @@ head(track)
 
 
 ```{r}
-taxa <- assignTaxonomy(seqtab.nochim, "~//home/rstudio/DADA2/", multithread=TRUE)
+taxa <- assignTaxonomy(seqtab.nochim, "/home/rstudio/DADA2/silva_nr99_v138.2_toGenus_trainset.fa.gz.3", multithread=TRUE)
+```
+
+```{r}
+taxa <- addSpecies(taxa, "/home/rstudio/DADA2/silva_v138.2_assignSpecies.fa.gz")
+```
+
+```{r}
+taxa.print <- taxa # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL
+head(taxa.print)
+```
+
+```{r}
+library(DECIPHER); packageVersion("DECIPHER")
+```
+
+```{r}
+dna <- DNAStringSet(getSequences(seqtab.nochim)) # Create a DNAStringSet from the ASVs
+load("~/tax/IDTaxa/SILVA_SSU_r138_2_2024.RData") # CHANGE TO THE PATH OF YOUR TRAINING SET
+ids <- IdTaxa(dna, trainingSet, strand="top", processors=NULL, verbose=FALSE) # use all processors
+ranks <- c("domain", "phylum", "class", "order", "family", "genus", "species") # ranks of interest
+# Convert the output object of class "Taxa" to a matrix analogous to the output from assignTaxonomy
+taxid <- t(sapply(ids, function(x) {
+        m <- match(ranks, x$rank)
+        taxa <- x$taxon[m]
+        taxa[startsWith(taxa, "unclassified_")] <- NA
+        taxa
+}))
+colnames(taxid) <- ranks; rownames(taxid) <- getSequences(seqtab.nochim)
 ```
 
